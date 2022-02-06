@@ -27,7 +27,7 @@ def to_onnx(torch_model, model_name, inputs, outputs, input_names=('input',), ou
                       # where to save the model (can be a file or file-like object)
                       f=f'{model_name}.onnx',
                       export_params=True,  # store the trained parameter weights inside the model file
-                      opset_version=12,  # the ONNX version to export the model to
+                      opset_version=9,  # the ONNX version to export the model to
                       do_constant_folding=False,  # whether to execute constant folding for optimization
                       input_names=input_names,  # the model's input names
                       output_names=output_names,  # the model's output names
