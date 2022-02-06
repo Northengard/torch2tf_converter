@@ -1,11 +1,17 @@
 # Torch2TF
 What's done:
 1) torch --> ONNX with simple onnx runtime checker
+2) Torch --> TF via model construction with weight initialisation. But it steel use onnx as intermediate representation, 
+although it is not required onnx-tf package anymore.
 
 What is expected to be in this repo: <br>
 It should contain at least 2 ways of weights mapping:
 1) Torch --> ONNX --> TF
 2) Torch --> TF via model construction with weight initialisation.
+
+What to do next:
+1) it's super important to dial with onnx opsets, for know 9 is used but 12 (or newer is available)
+2) add support of various types of operators
 
 # Prerequierements
 This code was developed and tested on python V 3.8.10+.
@@ -37,7 +43,7 @@ It can be launched like this:
 python torch2onnx.py --model-path ./resnet18.onnx --input-shape 3 224 224
 ```
 
-Check [check_onnx.py](check_onnx.py) for more details
+Check [check_onnx.py](handlers/check_onnx.py) for more details
 # Add custom model
 to add the custom model support you should make your own model 'visible' from 'models' subpackage.
 To deal with it simply add your model import to ```__init__``` properly or write the model inside this module and add related import into init.
