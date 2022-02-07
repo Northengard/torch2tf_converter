@@ -1,6 +1,7 @@
 .idea
 __pycache__/
 *.pth
+*.pt
 *.onnx
 *.pb
 *.tflite

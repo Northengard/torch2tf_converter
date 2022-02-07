@@ -63,22 +63,50 @@ class OnnxInterModel:
     def _parse_input(input_obj):
         return input_obj.name, [dim.dim_value for dim in input_obj.type.tensor_type.shape.dim]
 
-    def _get_conv(self, node):
-        conv_attr = {attr.name: attr.ints if attr.name != 'group' else attr.i for attr in node.attribute}
-        conv_attr['pads'] = conv_attr['pads'][1::2]
+    @staticmethod
+    def _get_conv_attrs(node):
+        attrs = {attr.name: attr.ints if attr.name != 'group' else attr.i for attr in node.attribute}
+        if 'pads' in attrs.keys():
+            attrs['pads'] = attrs['pads'][1::2]
+        return attrs
 
-        inputs = node.input
+    @staticmethod
+    def _get_linear_attrs(node):
+        attrs = {attr.name: attr.i if attr.type - 1 else attr.f for attr in node.attribute}
+        return attrs
+
+    def _get_weighted(self, node, attrs):
         conv_weights = [self._model_weights[w_name] for w_name in node.input[1:]]
 
-        conv_attr['input'] = inputs[:-2]
-        conv_attr['weights'] = conv_weights
-        conv_attr['output'] = node.output
+        attrs['input'] = node.input[:1]
+        attrs['weights'] = conv_weights
+        attrs['output'] = node.output
+
+    def _get_conv(self, node):
+        conv_attr = self._get_conv_attrs(node)
+        self._get_weighted(node, conv_attr)
         return conv_attr
+
+    def _get_gemm(self, node):
+        attrs = self._get_linear_attrs(node)
+        self._get_weighted(node, attrs)
+        return attrs
 
     @staticmethod
     def _get_node(node):
         attr_params = dict({'input': node.input, 'output': node.output})
         return attr_params
+
+    def _get_pool(self, node):
+        attrs = self._get_node(node)
+        attrs.update(self._get_conv_attrs(node))
+        return attrs
+
+    def _get_maxpool(self, node):
+        return self._get_pool(node)
+
+    def _get_globalaveragepool(self, node):
+        return self._get_pool(node)
 
     def _get_clip(self, node):
         attrs = self._get_node(node)
@@ -108,3 +136,8 @@ class OnnxInterModel:
 
     def _get_sigmoid(self, node):
         return self._get_node(node)
+
+    def _get_flatten(self, node):
+        attrs = self._get_node(node)
+        attrs['axis'] = node.attribute[0].i
+        return attrs

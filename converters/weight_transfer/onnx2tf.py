@@ -52,7 +52,7 @@ def get_conv3d(keras_layers, conv_parameters, is_depthwise, use_bias, input_tens
     raise NotImplementedError('TBA')
 
 
-def construct_conv(keras_layers, op_params, op_name, input_tensor):
+def get_conv(keras_layers, op_params, op_name, input_tensor):
     use_bias = len(op_params['weights']) > 1
     is_depthwise = op_params['group'] > 1
 
@@ -72,24 +72,25 @@ def construct_conv(keras_layers, op_params, op_name, input_tensor):
     return input_tensor
 
 
-def construct_linear(keras_layers, torch_op, op_name, input_tensor):
-    weights = [torch_op.weight.detach().numpy().transpose()]
-    use_bias = torch_op.bias is not None
-    if use_bias:
-        weights.append(torch_op.bias.detach().numpy())
-    input_tensor = keras_layers.Dense(units=torch_op.out_features,
+def get_dence(keras_layers, op_params, op_name, input_tensor):
+    weights = [w.transpose() for w in op_params['weights']]
+    use_bias = len(weights) > 1
+    out_features = weights[0].shape[1]
+    input_tensor = keras_layers.Dense(units=out_features,
                                       activation=None,
                                       use_bias=use_bias,
                                       name=op_name,
                                       weights=weights,
                                       kernel_regularizer=None,
-                                      bias_regularizer=None, activity_regularizer=None, kernel_constraint=None,
+                                      bias_regularizer=None,
+                                      activity_regularizer=None,
+                                      kernel_constraint=None,
                                       bias_constraint=None)(input_tensor)
     return input_tensor
 
 
-def construct_keras_flatten(keras_layers, torch_op, op_name, input_tensor):
-    input_tensor = keras_layers.Permute((3, 2, 1))(input_tensor)
+def get_flatten(keras_layers, op_params, op_name, input_tensor):
+    # input_tensor = keras_layers.Permute((3, 2, 1))(input_tensor)
     input_tensor = keras_layers.Flatten(name=op_name)(input_tensor)
     return input_tensor
 
@@ -104,14 +105,15 @@ def construct_maxpool(keras_layers, op_params, op_name, input_tensor):
     return input_tensor
 
 
-def construct_adaptive_avg_pool(keras_layers, torch_op, op_name, input_tensor):
-    if isinstance(torch_op.output_size, int):
-        output_size = np.array([torch_op.output_size, torch_op.output_size])
-    else:
-        output_size = np.array(torch_op.output_size)
-    inp_hw = np.array(input_tensor.shape[1:-1])
-    pool_size = (inp_hw / output_size).astype(int)
-    input_tensor = keras_layers.AveragePooling2D(pool_size, name=op_name)(input_tensor)
+def get_global_avg_pool(keras_layers, op_params, op_name, input_tensor):
+    return keras_layers.GlobalAvgPool2D(name=op_name)(input_tensor)
+
+
+def get_maxpool(keras_layers, op_params, op_name, input_tensor):
+    input_tensor = do_pad(op_params['pads'], input_tensor, op_name)
+    input_tensor = keras_layers.MaxPool2D(pool_size=op_params['kernel_shape'],
+                                          padding='valid',
+                                          strides=op_params['strides'])(input_tensor)
     return input_tensor
 
 
@@ -155,11 +157,12 @@ def get_upsample(keras_layers, op_params, op_name, input_tensor):
     return input_tensor
 
 
-tf_layers_constructors = {'conv': construct_conv,
-                          'linear': construct_linear,
-                          'flatten': construct_keras_flatten,
+tf_layers_constructors = {'conv': get_conv,
+                          'gemm': get_dence,
+                          'flatten': get_flatten,
                           'identity': get_identity,
-                          'adaptiveavgpool2d': construct_adaptive_avg_pool,
+                          'globalaveragepool': get_global_avg_pool,
+                          'maxpool': get_maxpool,
                           'add': get_add,
                           'concat': get_concat,
                           'upsample': get_upsample,
@@ -182,11 +185,16 @@ def construct_tf_model(parsed_model):
     model_inputs = layers.Input(shape=input_size, name=input_name)
     model_outputs = list()
     x = model_inputs
-
+    last_node_output = model_layers[0]['output']
     skip_connections = dict()
     for layer in model_layers:
         layer_name = layer['name']
         layer_id = layer['node_id']
+        if not np.any(np.isin(last_node_output, layer['input'])):
+            if layer_id in skip_connections.keys():
+                skip = x
+                skip_connections[model_connections[layer_id - 1][0]] = skip
+                x = skip_connections.pop(layer_id)
         if len(layer['input']) > 1:
             x = tf_layers_constructors[layer['op_type']](x, skip_connections.pop(layer_id))
         else:
@@ -202,6 +210,7 @@ def construct_tf_model(parsed_model):
         if layer['output'][0] in output_names:
             model_outputs.append(x)
             x = skip_connections.get(layer_id + 1, None)
+        last_node_output = layer['output']
     model = training.Model(inputs=model_inputs, outputs=model_outputs)
     return model
 
