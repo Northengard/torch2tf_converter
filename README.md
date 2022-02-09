@@ -19,7 +19,17 @@ How it works:
 Technically it uses the same way to export model as [onnx-tf](https://github.com/onnx/onnx-tensorflow),
 but Torch2TF avoids additional nodes production and does not turn model into [tf-proto](https://chromium.googlesource.com/external/github.com/tensorflow/tensorflow/+/r0.10/tensorflow/g3doc/how_tos/tool_developers/index.md) format.
 
-Supported for know:
+Supported for now (refers to proposed method):
+1) conv2d
+2) depthwise conv2d
+3) dense (linear)
+4) maxpool
+5) global avg pool (adaptive avg pool)
+6) activations
+7) add
+8) concat
+9) flatten
+10) upsample
 
 TODO:
 1) support multi-input models
