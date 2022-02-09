@@ -26,6 +26,5 @@ if __name__ == '__main__':
     dummy = [np.random.randn(1, *t_shape).astype(np.float32)
              for t_shape in np.array(input_shape).reshape(-1, 3).astype(int)]
     outputs = session.run([], dict(zip(input_names, dummy)))
-    # print(outputs)
     print('output shapes:')
     print([out.shape for out in outputs])

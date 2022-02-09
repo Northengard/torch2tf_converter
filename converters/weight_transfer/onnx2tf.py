@@ -2,10 +2,8 @@ import numpy as np
 
 import tensorflow as tf
 from tensorflow.python.keras.engine import training
-from tensorflow.python.keras import layers
-# from tensorflow.python.keras.layers import VersionAwareLayers
+from tensorflow.python.keras.layers import VersionAwareLayers as layers
 
-from handlers.onnx_graph_parser import OnnxInterModel
 from tensorflow.keras import activations
 
 
