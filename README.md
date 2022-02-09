@@ -20,16 +20,21 @@ Technically it uses the same way to export model as [onnx-tf](https://github.com
 but Torch2TF avoids additional nodes production and does not turn model into [tf-proto](https://chromium.googlesource.com/external/github.com/tensorflow/tensorflow/+/r0.10/tensorflow/g3doc/how_tos/tool_developers/index.md) format.
 
 Supported for now (refers to proposed method):
-1) conv2d
-2) depthwise conv2d
-3) dense (linear)
-4) maxpool
-5) global avg pool (adaptive avg pool)
-6) activations
-7) add
-8) concat
-9) flatten
-10) upsample
+1) operators:
+   1) conv2d
+      1) common
+      2) depthwise
+   2) dense (linear)
+   3) pooling
+      1) maxpool
+      2) global avg pool (adaptive avg pool)
+   4) activations
+   5) add
+   6) concat
+   7) flatten
+   8) upsample
+2) skip-connections
+3) branching
 
 TODO:
 1) support multi-input models
@@ -62,6 +67,8 @@ There is no any 'special' requierements yet. All dependencies may be installed v
 ```Shell
 python torch2onnx.py --model-name resnet18 --input-shape 3 224 224 --output-path ./
 ```
+## Proposed method
+Check [main.py](main.py) for details
 
 # Testing 
 Onnx Runtime test scripts is also available. It pass the dummy input through the onnx model so its possible to see it fails or not.
