@@ -3,6 +3,8 @@ from sys import argv
 from argparse import ArgumentParser
 
 import torch
+import tensorflow as tf
+import numpy as np
 
 from handlers import OnnxInterModel, fuse
 
@@ -45,7 +47,20 @@ if __name__ == '__main__':
                                   use_simplify=False)
 
     tf_model = construct_tf_model(model_parser)
+    tf_model.summary()
     tf_model_path = os.path.join(args.output_path, args.model_name + '.pb')
+
+    with torch.no_grad():
+        random_tensor = np.random.rand(1, *args.input_shape).astype(np.float32)
+        torch_rand_t = torch.from_numpy(random_tensor)
+        tf_rand_t = tf.constant(random_tensor.transpose(0, 2, 3, 1))
+
+        torch_out = torch_model(torch_rand_t)
+        torch_out = torch_out.numpy()
+    tf_out = tf_model(tf_rand_t)
+    tf_out = tf_out.numpy()
+    diff = np.abs(torch_out - tf_out)
+    print(f"models output diff max: {diff.max()}, mean: {diff.mean()}, std: {diff.std()}")
 
     tf_model.save(tf_model_path)
     to_tflite(tf_model_path)
