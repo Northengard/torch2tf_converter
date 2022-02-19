@@ -226,6 +226,6 @@ def to_tflite(tf_model_name, tflite_optimization=None):
     tflite_model = converter.convert()
 
     # Save the model.
-    tflite_model_name = tf_model_name.split('.')[0] + '.tflite'
+    tflite_model_name = tf_model_name.rpartition('.')[0] + '.tflite'
     with open(tflite_model_name, 'wb') as f:
         f.write(tflite_model)
